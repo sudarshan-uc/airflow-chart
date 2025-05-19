@@ -46,6 +46,12 @@ airflow:
   scheduler:
     livenessProbe:
       timeoutSeconds: 30
+    readinessProbe:
+      initialDelaySeconds: 10
+      timeoutSeconds: 20
+      failureThreshold: 5
+      periodSeconds: 30
+      command: ~
     strategy:
       type: Recreate
     affinity:
@@ -607,9 +613,38 @@ gitSyncRelay:
   # webhookSecurityKey is only needed when repoFetchMode=webhook
   webhookSecretKey: ~
   securityContext: {}
-  gitDaemon: {}
+  gitDaemon:
+    livenessProbe:
+      exec:
+        command:
+        - touch
+        - /git/.git/git-daemon-export-ok
+      initialDelaySeconds: 5
+      periodSeconds: 15
+    readinessProbe:
+      exec:
+        command:
+        - test
+        - -f
+        - /git/.git/git-daemon-export-ok
+      initialDelaySeconds: 5
+      periodSeconds: 10
   gitSync:
     webhookPort: 8000
+    livenessProbe:
+      httpGet:
+        path: /metrics
+        port: 9094
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 5
+    readinessProbe:
+      httpGet:
+        path: /metrics
+        port: 9094
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
   images:
     gitDaemon:
       repository: "quay.io/astronomer/ap-git-daemon"
